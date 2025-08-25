@@ -1,0 +1,10 @@
+m_val = 600;
+d_values = 0.1;
+n_mtx = 5;
+output_dir = "../instances/rectangular_sparse";
+
+for i = 1:10
+    m = m_val * i;
+    r_values = m / 4;
+    gen_multiple_matrices_GL(m, r_values, d_values, n_mtx, output_dir);
+end
