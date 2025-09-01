@@ -4,7 +4,7 @@ include("utility.jl")
 include("types.jl")
 include("./methods/drs.jl")
 
-m = 500
+m = 100
 n = Int(m / 2)
 r = Int(m / 4)
 d = 100
@@ -32,7 +32,7 @@ epsilon = 10^(-5)
 eps_opt = epsilon
 eps_abs = epsilon
 eps_rel = 10^(-4)
-fixed_tol = false
+fixed_tol = true
 
 time_limit = 1200
 stop_crits = ["Opt", "Fixed_Point"]
