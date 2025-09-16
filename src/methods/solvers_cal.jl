@@ -3,6 +3,7 @@ using JuMP
 using LinearAlgebra
 
 function gurobi_solver_cal(data::DataInst, problem::String, opt_tol::Float64=10^(-5), time_limit::Int64=7200)
+    start_time = time()
     null_matrix = zeros(data.n, data.m)
     U, S, V = svd(data.A, full=true)
     S = Diagonal(S)
@@ -13,6 +14,12 @@ function gurobi_solver_cal(data::DataInst, problem::String, opt_tol::Float64=10^
     U2 = U[:, r+1:end]
     V1 = V[:, 1:r]
     V2 = V[:, r+1:end]
+    elapsed_time = time() - start_time
+    time_limit = max(0, time_limit - elapsed_time)
+
+    if time_limit == 0
+        throw(ErrorException("Model was not optimized successfully. Status Code: SVD_TimeLimit"))
+    end
 
     model = Model(Gurobi.Optimizer)
 

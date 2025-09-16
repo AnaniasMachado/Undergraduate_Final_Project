@@ -55,6 +55,10 @@ function add_constraint_PMX(inst::GurobiInst, data::DataInst)
     )
 end
 
+function add_constraint_P1Sym(inst::GurobiInst, data::DataInst)
+    @constraint(inst.model, data.A * inst.H * data.A + inst.H .== data.A + inst.H', base_name = "P1Sym_")
+end
+
 constraints_dict = Dict(
     "P1" => add_constraint_P1,
     "P3" => add_constraint_P3,
@@ -67,7 +71,8 @@ constraints_dict = Dict(
     "PLSr" => add_constraint_PLSr,
     "PMN" => add_constraint_PMN,
     "PMNr" => add_constraint_PMNr,
-    "PMX" => add_constraint_PMX
+    "PMX" => add_constraint_PMX,
+    "P1Sym" => add_constraint_P1Sym
 )
 
 function add_constraints(inst::GurobiInst, data::DataInst, constraints::Vector{String})

@@ -2,7 +2,7 @@ using MAT
 
 include("utility.jl")
 include("types.jl")
-include("./methods/drs.jl")
+include("./methods/admm.jl")
 
 m = 100
 n = Int(m / 2)
@@ -22,33 +22,31 @@ r = rank(A)
 
 println("m = $m, n = $n, r = $r")
 
-problem = "P123"
+data = DataInst(A, m, n, r, AMP=AMP)
+constraints = ["P13"]
+problem = "P13"
 rho = 3.0
 lambda = 10^(-2)
 
-epsilon = 10^(-5)
+epsilon = 10^(-4)
 eps_opt = epsilon
 eps_abs = epsilon
 eps_rel = 10^(-4)
 fixed_tol = true
 
 time_limit = 1200
-stop_crits = ["Opt", "Fixed_Point"]
-stop_crit = stop_crits[1]
 
-DRS_time = @elapsed begin
-    DRS_H, DRS_k = drs(A, lambda, eps_abs, eps_rel, problem, fixed_tol, eps_opt, stop_crit, time_limit)
+run_time = @elapsed begin
+    H = admm_p123(A, rho, eps_abs, eps_rel, fixed_tol, eps_opt, time_limit)
 end
-DRS_H_norm_0 = matrix_norm_0(DRS_H)
-DRS_H_norm_1 = norm(DRS_H, 1)
+H_norm_0 = matrix_norm_0(H)
+H_norm_1 = norm(H, 1)
 
-println("Stop crit: $stop_crit")
 println("Fixed tol: $fixed_tol")
 println("Eps opt: $eps_opt")
 println("Eps abs: $eps_abs")
 println("Eps rel: $eps_rel")
-println("DRS time: $DRS_time")
-println("DRS k: $DRS_k")
-println("DRS norm 1: $DRS_H_norm_1")
-println("DRS norm 0: $DRS_H_norm_0")
-println("DRS bound ratio: $(DRS_H_norm_0 / (r^2 + (m-r)*n))")
+println("ADMM time: $run_time")
+println("ADMM norm 1: $H_norm_1")
+println("ADMM norm 0: $H_norm_0")
+println("ADMM bound ratio: $(H_norm_0 / (r^2 + (m-r)*n))")

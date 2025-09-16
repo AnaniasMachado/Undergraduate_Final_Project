@@ -12,7 +12,7 @@ include("../methods/admm.jl")
 include("../methods/drs.jl")
 
 methods = ["Gurobi", "Gurobi_Cal", "ADMM", "DRS"]
-method = methods[1]
+method = methods[4]
 
 # Mixed parameters
 problems = ["P123"]
@@ -20,7 +20,7 @@ problem = problems[1]
 epsilon = 10^(-5)
 eps_abs = epsilon
 eps_rel = 10^(-3)
-fixed_tol = false
+fixed_tol = true
 eps_opt = epsilon
 time_limit = 7200
 
@@ -35,10 +35,10 @@ rho = 3.0
 lambda = 10^(-2)
 
 stop_crits = ["Opt", "Fixed_Point"]
-stop_crit = stop_crits[1]
+stop_crit = stop_crits[2]
 
 matrices_folder = "./instances/rectangular_dense"
-m_values = [500 * i for i in 1:10]
+m_values = vcat([100 * i for i in 1:4], [500 * i for i in 1:10])
 
 results_folder = "results/problem_$problem"
 
@@ -83,7 +83,7 @@ for m in m_values
             if method == "Gurobi"
                 try
                     time = @elapsed begin
-                        H = gurobi_solver(data, constraints, eps_grb, time_limit)
+                        H = gurobi_solver(data, constraints, eps_opt, time_limit)
                     end
                     H_norm_0 = matrix_norm_0(H)
                     H_norm_1 = norm(H, 1)
@@ -109,7 +109,7 @@ for m in m_values
             elseif method == "Gurobi_Cal"
                 try
                     time = @elapsed begin
-                        H = gurobi_solver_cal(data, problem, eps_grb, time_limit)
+                        H = gurobi_solver_cal(data, problem, eps_opt, time_limit)
                     end
                     H_norm_0 = matrix_norm_0(H)
                     H_norm_1 = norm(H, 1)
@@ -149,11 +149,11 @@ for m in m_values
                     if fixed_tol
                         solution_filename = "ADMMe/problem_$(problem)_m_$(m)_n_$(n)_d_$(d)_idx_$(idx)"
                         solution_filepath = joinpath(solutions_folder, solution_filename)
-                        matwrite(solution_filepath, Dict("H" => ADMM_H, "time" => ADMM_time))
+                        matwrite(solution_filepath, Dict("H" => H, "time" => time))
                     else
                         solution_filename = "ADMM/problem_$(problem)_m_$(m)_n_$(n)_d_$(d)_idx_$(idx)"
                         solution_filepath = joinpath(solutions_folder, solution_filename)
-                        matwrite(solution_filepath, Dict("H" => ADMM_H, "time" => ADMM_time))
+                        matwrite(solution_filepath, Dict("H" => H, "time" => time))
                     end
                 end
             elseif method == "DRS"
