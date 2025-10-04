@@ -36,7 +36,7 @@ function get_proj_data(A::Matrix{Float64}, problem::String)
         AMP = A' * SMP
         proj_data = DRSProjDataSimple(R, S, T, RMP, SMP, T_factor, AMP)
         return proj_data
-    elseif (problem in ["P134", "P123", "P124"]) 
+    elseif (problem in ["P134", "P123", "P124", "P1Sym"]) 
         AMP = pinv(A)
         proj_data = DRSProjData(AMP)
         return proj_data
@@ -52,37 +52,45 @@ function projection(A::Matrix{Float64}, X::Matrix{Float64}, proj_data::Union{DRS
         Z = proj_data.AMP * A * X * A * proj_data.AMP
         Y = X - proj_data.AMP * A * X + proj_data.AMP - X * A * proj_data.AMP + Z
         return Y
+    elseif problem == "P1Sym"
+        Z = (X + X') / 2
+        Y = Z - A * proj_data.AMP * Z * proj_data.AMP * A + proj_data.AMP
+        return Y
     else
         Y = X - proj_data.RMP * proj_data.R * X * proj_data.S * proj_data.SMP + proj_data.T_factor
         return Y
     end
 end
 
-function primal_residual(A::Matrix, V::Matrix, proj_data::Union{DRSProjDataSimple, DRSProjData}, problem::String)
+function primal_residual(A::Matrix, X::Matrix, proj_data::Union{DRSProjDataSimple, DRSProjData}, problem::String)
     if problem == "P1"
-        return norm(A * V * A - A)
+        return norm(A * X * A - A)
     elseif problem == "P13"
-        return norm(A' * A * V - A')
+        return norm(A' * A * X - A')
     elseif problem == "P14"
-        return norm(V * A * A' - A')
+        return norm(X * A * A' - A')
     elseif problem in ["P123", "P124"]
-        return norm(A' * V' * A' + V * A * proj_data.AMP - A' - V)
+        return norm(A' * X' * A' + X * A * proj_data.AMP - A' - X)
     elseif problem == "P134"
-        return norm(A' * A * V + V * A * A' - 2 * A')
+        return norm(A' * A * X + X * A * A' - 2 * A')
+    elseif problem == "P1Sym"
+        return norm(A * X * A + X - A - X')
     end
 end
 
-function primal_residual_matrix(A::Matrix, V::Matrix, proj_data::Union{DRSProjDataSimple, DRSProjData}, problem::String)
+function primal_residual_matrix(A::Matrix, X::Matrix, proj_data::Union{DRSProjDataSimple, DRSProjData}, problem::String)
     if problem == "P1"
-        return A * V * A - A
+        return A * X * A - A
     elseif problem == "P13"
-        return A' * A * V - A'
+        return A' * A * X - A'
     elseif problem == "P14"
-        return V * A * A' - A'
+        return X * A * A' - A'
     elseif problem in ["P123", "P124"]
-        return A' * V' * A' + V * A * proj_data.AMP - A' - V
+        return A' * X' * A' + X * A * proj_data.AMP - A' - X
     elseif problem == "P134"
-        return A' * A * V + V * A * A' - 2 * A'
+        return A' * A * X + X * A * A' - 2 * A'
+    elseif problem == "P1Sym"
+        return A * X * A + X - A - X'
     end
 end
 
@@ -97,6 +105,11 @@ function dual_variable(A::Matrix{Float64}, X::Matrix{Float64}, V::Matrix{Float64
         L = proj_data.AMP * proj_data.AMP' * B
         G = (B - proj_data.AMP * A * B) * proj_data.AMP' * proj_data.AMP
         return L, G
+    elseif problem == "P1Sym"
+        B = (1 / lambda) * (X - V)
+        L = proj_data.AMP * (B + B') * proj_data.AMP / 2
+        G_minus_GT = (B - B') / 2
+        return L, G_minus_GT
     else
         L = proj_data.RMP' * (1 / lambda) * (X - V) * proj_data.SMP'
         return L
@@ -110,6 +123,9 @@ function dual_residual(A::Matrix{Float64}, X::Matrix{Float64}, V::Matrix{Float64
     elseif problem == "P134"
         Lambda, Gamma = dual_variable(A, X, V, lambda, proj_data, problem)
         return norm((1 / lambda) * (V - X) + A' * A * Lambda + Gamma * A * A')
+    elseif problem == "P1Sym"
+        Lambda, Gamma_minus_GammaT = dual_variable(A, X, V, lambda, proj_data, problem)
+        return norm(A * Lambda * A + Gamma_minus_GammaT - (1 / lambda) * (X - V))
     else
         Lambda = dual_variable(A, X, V, lambda, proj_data, problem)
         return norm((1 / lambda) * (V - X) + proj_data.R' * Lambda * proj_data.S')
@@ -123,6 +139,9 @@ function dual_residual_matrix(A::Matrix{Float64}, X::Matrix{Float64}, V::Matrix{
     elseif problem == "P134"
         Lambda, Gamma = dual_variable(A, X, V, lambda, proj_data, problem)
         return (1 / lambda) * (V - X) + A' * A * Lambda + Gamma * A * A'
+    elseif problem == "P1Sym"
+        Lambda, Gamma_minus_GammaT = dual_variable(A, X, V, lambda, proj_data, problem)
+        return A * Lambda * A + Gamma_minus_GammaT - (1 / lambda) * (X - V)
     else
         Lambda = dual_variable(A, X, V, lambda, proj_data, problem)
         return (1 / lambda) * (V - X) + proj_data.R' * Lambda * proj_data.S'

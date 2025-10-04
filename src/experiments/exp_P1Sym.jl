@@ -8,34 +8,30 @@ include("../types.jl")
 include("../utility.jl")
 include("../methods/solvers.jl")
 include("../methods/solvers_cal.jl")
-include("../methods/admm.jl")
 include("../methods/drs.jl")
 
-methods = ["Gurobi", "Gurobi_Cal", "ADMM", "DRS"]
-method = methods[4]
+methods = ["Gurobi", "Gurobi_Cal", "DRS"]
+method = methods[3]
 
 # Mixed parameters
-problems = ["P134"]
+problems = ["P1Sym"]
 problem = problems[1]
 epsilon = 10^(-5)
 eps_abs = epsilon
-eps_rel = 10^(-3)
+eps_rel = 10^(-4)
 fixed_tol = false
 eps_opt = epsilon
 time_limit = 7200
 
 # Gurobi parameters
-constraints_set = [["P1", "P3", "P4"], ["PMN", "P3"], ["PLS", "PMN"], ["P13R", "P14R"], ["PMX"]]
-constraints = constraints_set[1]
-
-# ADMM parameters
-rho = 3.0
+constraints_set = [["P1", "Sym"], ["P1Sym"]]
+constraints = constraints_set[2]
 
 # DRS parameters
 lambda = 10^(-2)
 
 stop_crits = ["Opt", "Fixed_Point"]
-stop_crit = stop_crits[2]
+stop_crit = stop_crits[1]
 
 matrices_folder = "./instances/square_dense"
 m_values = vcat([100 * i for i in 1:4], [500 * i for i in 1:10])
@@ -53,7 +49,6 @@ rank_ratio_list = []
 time_list = []
 
 d = 100
-idx = 0
 max_idx = 5
 min_unsolvable_m = Inf
 
@@ -71,6 +66,7 @@ for m in m_values
         A = mat_data["A"]
         A = Matrix(A)
         AMP = pinv(A)
+        bound = n^2 - (n - r) * (n - r + 1) / 2
 
         data = DataInst(A, m, n, r, AMP=AMP)
 
@@ -89,7 +85,7 @@ for m in m_values
                     H_norm_1 = norm(H, 1)
                     H_rank = calculate_rank(H)
 
-                    bound_ratio = H_norm_0 / (m * r + n * r - r^2)
+                    bound_ratio = H_norm_0 / bound
                     norm_0_ratio = H_norm_0 / matrix_norm_0(AMP)
                     norm_1_ratio = H_norm_1 / norm(AMP, 1)
                     rank_ratio = H_rank / r
@@ -115,7 +111,7 @@ for m in m_values
                     H_norm_1 = norm(H, 1)
                     H_rank = calculate_rank(H)
 
-                    bound_ratio = H_norm_0 / (m * r + n * r - r^2)
+                    bound_ratio = H_norm_0 / bound
                     norm_0_ratio = H_norm_0 / matrix_norm_0(AMP)
                     norm_1_ratio = H_norm_1 / norm(AMP, 1)
                     rank_ratio = H_rank / r
@@ -130,32 +126,6 @@ for m in m_values
                         throw(ErrorException("Gurobi failed to solve problem something unexpected.", e))
                     end
                 end
-            elseif method == "ADMM"
-                time = @elapsed begin
-                    H = admm_p134(A, rho, eps_abs, eps_rel, fixed_tol, eps_opt, time_limit)
-                end
-                if H == "-"
-                    global min_unsolvable_m = min(m, min_unsolvable_m)
-                else
-                    H_norm_0 = matrix_norm_0(H)
-                    H_norm_1 = norm(H, 1)
-                    H_rank = calculate_rank(H)
-
-                    bound_ratio = H_norm_0 / (m * r + n * r - r^2)
-                    norm_0_ratio = H_norm_0 / matrix_norm_0(AMP)
-                    norm_1_ratio = H_norm_1 / norm(AMP, 1)
-                    rank_ratio = H_rank / r
-
-                    if fixed_tol
-                        solution_filename = "ADMMe/problem_$(problem)_m_$(m)_n_$(n)_d_$(d)_idx_$(idx)"
-                        solution_filepath = joinpath(solutions_folder, solution_filename)
-                        matwrite(solution_filepath, Dict("H" => H, "time" => time))
-                    else
-                        solution_filename = "ADMM/problem_$(problem)_m_$(m)_n_$(n)_d_$(d)_idx_$(idx)"
-                        solution_filepath = joinpath(solutions_folder, solution_filename)
-                        matwrite(solution_filepath, Dict("H" => H, "time" => time))
-                    end
-                end
             elseif method == "DRS"
                 time = @elapsed begin
                     H, k = drs(A, lambda, eps_abs, eps_rel, problem, fixed_tol, eps_opt, stop_crit, time_limit)
@@ -167,7 +137,7 @@ for m in m_values
                     H_norm_1 = norm(H, 1)
                     H_rank = calculate_rank(H)
 
-                    bound_ratio = H_norm_0 / (m * r + n * r - r^2)
+                    bound_ratio = H_norm_0 / bound
                     norm_0_ratio = H_norm_0 / matrix_norm_0(AMP)
                     norm_1_ratio = H_norm_1 / norm(AMP, 1)
                     rank_ratio = H_rank / r
@@ -252,16 +222,6 @@ elseif method == "Gurobi_Cal"
     results_filename = "results_$(problem)_Gurobi_Cal.csv"
     results_filepath = joinpath(results_folder, results_filename)
     CSV.write(results_filepath, df)
-elseif method == "ADMM"
-    if fixed_tol
-        results_filename = "results_$(problem)_ADMMe.csv"
-        results_filepath = joinpath(results_folder, results_filename)
-        CSV.write(results_filepath, df)
-    else
-        results_filename = "results_$(problem)_ADMM.csv"
-        results_filepath = joinpath(results_folder, results_filename)
-        CSV.write(results_filepath, df)
-    end
 elseif method == "DRS"
     if fixed_tol && stop_crit == "Opt"
         results_filename = "results_$(problem)_DRS_Opt_Eps.csv"

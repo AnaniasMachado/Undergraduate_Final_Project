@@ -124,5 +124,40 @@ function gurobi_solver_cal(data::DataInst, problem::String, opt_tol::Float64=10^
         else
             throw(ErrorException("Model was not optimized successfully. Status Code: $status"))
         end
+    elseif problem == "P1Sym"
+        @variable(model, Z[1:(data.n-r), 1:r], lower_bound=-Inf, upper_bound=Inf)
+        @variable(model, W[1:(data.n-r), 1:(data.m-r)], Symmetric, lower_bound=-Inf, upper_bound=Inf)
+        @variable(model, T[1:data.n, 1:data.m], lower_bound=-Inf, upper_bound=Inf)
+
+        @objective(model, Min, sum(T[i, j] for i in 1:data.n, j in 1:data.m))
+
+        G = V1 * D_inv * V1'
+        H = G + V1 * Z' * V2' + V2 * Z * V1' + V2 * W * V2'
+        @constraint(model, T - H .>= null_matrix, base_name = "T_minus_H_")
+        @constraint(model, T + H .>= null_matrix, base_name = "T_plus_H_")
+
+        set_attribute(model, "BarConvTol", 1e-5)
+        set_attribute(model, "FeasibilityTol", 1e-5)
+        set_attribute(model, "OptimalityTol", opt_tol)
+
+        # set_attribute(inst.model, "DualReductions", 0)
+
+        set_optimizer_attribute(model, "TimeLimit", time_limit)
+
+        set_optimizer_attribute(model, "LogToConsole", 0)
+
+        # set_optimizer_attribute(inst.model, "LogFile", "gurobi_log.txt")
+
+        optimize!(model)
+
+        status = termination_status(model)
+        if status == MOI.OPTIMAL
+            Z_star = [value(Z[i, j]) for i in 1:(data.n-r), j in 1:r]
+            W_star = [value(W[i, j]) for i in 1:(data.n-r), j in 1:(data.m-r)]
+            H_star = G + V1 * Z_star' * V2' + V2 * Z_star * V1' + V2 * W_star * V2'
+            return H_star
+        else
+            throw(ErrorException("Model was not optimized successfully. Status Code: $status"))
+        end
     end
 end
