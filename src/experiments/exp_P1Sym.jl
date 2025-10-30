@@ -18,7 +18,7 @@ problems = ["P1Sym"]
 problem = problems[1]
 epsilon = 10^(-5)
 eps_abs = epsilon
-eps_rel = 10^(-4)
+eps_rel = 10^(-3)
 fixed_tol = false
 eps_opt = epsilon
 time_limit = 7200
@@ -31,7 +31,7 @@ constraints = constraints_set[2]
 lambda = 10^(-2)
 
 stop_crits = ["Opt", "Fixed_Point"]
-stop_crit = stop_crits[1]
+stop_crit = stop_crits[2]
 
 matrices_folder = "./instances/square_dense"
 m_values = vcat([100 * i for i in 1:4], [500 * i for i in 1:10])
@@ -65,6 +65,7 @@ for m in m_values
         
         A = mat_data["A"]
         A = Matrix(A)
+        A = A' * A
         AMP = pinv(A)
         bound = n^2 - (n - r) * (n - r + 1) / 2
 
